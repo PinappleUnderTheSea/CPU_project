@@ -3,13 +3,27 @@
 `ifdef VERILATOR
 `include "include/common.sv"
 `include "pipeline/regfile/regfile.sv"
+`include "pipeline/decode/decode.sv"
+`include "pipeline/fetch/fetch.sv"
+`include "pipeline/fetch/pcselect.sv"
+`include "pipeline/execute/execute.sv"
+`include "pipeline/memory/memory.sv"
+`include "pipeline/writeback/writeback.sv"
+`include "pipeline/regs/F_TO_D.sv"
+`include "pipeline/regs/D_TO_E.sv"
+`include "pipeline/regs/E_TO_M.sv"
+`include "pipeline/regs/M_TO_W.sv"
+`include "pipeline/regs/hazard.sv"
+
+
 
 `else
 
 `endif
 
 module core 
-	import common::*;(
+	import common::*;
+	import pipes::*;(
 	input logic clk, reset,
 	output ibus_req_t  ireq,
 	input  ibus_resp_t iresp,
@@ -17,17 +31,147 @@ module core
 	input  dbus_resp_t dresp
 );
 	/* TODO: Add your pipeline here. */
+	u64 pc,pc_nxt;
+	// logic cc;
+	always_ff @(posedge clk)begin
+		if(reset)
+			pc<=64'h8000_0000;
+		else 
+			pc <= pc_nxt;
+
+	end
+	assign ireq.addr = pc;
+
+	u32 raw_instr;
+	assign raw_instr = iresp.data;
+	
+	
+	fetch_data_t dataF,dataFH;
+	decode_data_t dataD,dataDH,dataDH1,dataDN;
+	execute_data_t dataE,dataEH;
+	memory_data_t dataM,dataMH;
+	writeback_data_t dataW;
+
+	creg_addr_t ra1,ra2;
+	word_t rd1,rd2;
+	word_t result;
+	word_t dout;//imm out
+	logic branch;
+	
+	 always_ff@(posedge clk)begin
+		dataDN<=dataD;
+	 end
+
+
+	hazard hazard(
+		.dataF,
+		.dataFH,
+		.dataD,
+		.dataDH,
+		.dataE,
+		.dataEH,
+		.dataM,
+		.dataMH,
+		.clk,
+		.reset,
+		.dataDN,
+		.branch
+
+	);
+
+	fetch fetch (
+		.dataF(dataF),
+		.raw_instr(raw_instr),
+		.pc
+	);
+
+	// F_TO_D f_to_d(
+	// 	.dataF,
+	// 	.dataF1,
+	// 	.clk,
+	// 	.reset
+	// );
+
+	decode decode(
+		.dataF(dataFH),
+		.dataD,
+		.ra1,.ra2,.rd1,.rd2,
+		.dataE,
+		.dataM,
+		.dataMH
+	);
+
+	pcselect pcselect(
+		.pc(pc),
+		.pc_nxt(pc_nxt),
+		.dataD,
+		.cc_e(dataE.cc),
+		.cc_m(dataM.cc),
+		.cc_w(dataW.cc),
+		.dataE,
+		.dataM,
+		.dataW,
+		.branch
+	);
+	
+	// D_TO_E d_to_e(
+	// 	.dataD,
+	// 	.dataD1,
+	// 	.clk,
+	// 	.reset
+	// );
+
+	always_comb begin
+		dataDH1=(dataDH.cc)?dataDH:'0;
+	end
+
+	execute execute(
+		.dataD(dataDH1),
+		.dataE
+		
+	);
+
+	// E_TO_M e_to_m(
+	// 	.dataE,
+	// 	.dataE1,
+	// 	.clk,
+	// 	.reset
+	// );
+
+	memory memory(
+		.dataE(dataEH),
+		.dataM,
+		.dreq,
+		.dresp
+	);
+
+	// M_TO_W m_to_w(
+	// 	.dataM,
+	// 	.dataM1,
+	// 	.clk,
+	// 	.reset
+	// );
+
+	//assign dreq.addr=dataM.m_write_addr;
+	writeback writeback(
+		.dataM(dataMH),
+		.dataW,
+		.dresp
+	);
+	
+	assign result=dataW.write_result;
+	//assign result=rd1+{{44{raw_instr[31]}},raw_instr[31:12]};
 
 
 	regfile regfile(
 		.clk, .reset,
-		.ra1(),
-		.ra2(),
-		.rd1(),
-		.rd2(),
-		.wvalid(),
-		.wa(),
-		.wd()
+		.ra1,
+		.ra2,
+		.rd1,
+		.rd2,
+		.wvalid(dataW.ctl.regwrite),
+		.wa(dataW.dst),
+		.wd(result)
 	);
 
 `ifdef VERILATOR
@@ -35,15 +179,15 @@ module core
 		.clock              (clk),
 		.coreid             (0),
 		.index              (0),
-		.valid              (0),
-		.pc                 (0),
+		.valid              (~reset&&dataW.go),
+		.pc                 (dataW.pc),
 		.instr              (0),
-		.skip               (0),
+		.skip               (dataW.ctl.skip),
 		.isRVC              (0),
 		.scFailed           (0),
-		.wen                (0),
-		.wdest              (0),
-		.wdata              (0)
+		.wen                (dataW.ctl.regwrite),
+		.wdest              ({3'b0,dataW.dst}),
+		.wdata              (result)
 	);
 	      
 	DifftestArchIntRegState DifftestArchIntRegState (

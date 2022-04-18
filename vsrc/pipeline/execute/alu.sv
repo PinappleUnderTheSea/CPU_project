@@ -19,6 +19,14 @@ module alu
 		c = '0;
 		unique case(alufunc)
 			ALU_ADD: c = a + b;
+			ALU_XOR: c = a ^ b;
+			ALU_OR : c = a | b;
+			ALU_AND: c = a & b;
+			ALU_IMM: c = b;
+			ALU_SUB: c = a - b;
+			ALU_SLL: c = a << b;
+			ALU_SLT: c = ($signed(a)<$signed(b)?)1'b1:1'b0;
+			ALU_SLTU c = (a<b)?1b'1:1'b0;
 			default: begin
 				
 			end

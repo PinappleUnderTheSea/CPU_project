@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2018.3 (64-bit)
+# SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+# IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+# Start of session at: Wed Mar 23 17:07:30 2022
+# Process ID: 77984
+# Current directory: F:/CPU_program/lab1/clone/Arch-2022Spring-FDU/vsrc
+# Command line: vivado.exe F:\CPU_program\lab1\clone\Arch-2022Spring-FDU\vsrc\add_sources.tcl
+# Log file: F:/CPU_program/lab1/clone/Arch-2022Spring-FDU/vsrc/vivado.log
+# Journal file: F:/CPU_program/lab1/clone/Arch-2022Spring-FDU/vsrc\vivado.jou
+#-----------------------------------------------------------
+start_gui
