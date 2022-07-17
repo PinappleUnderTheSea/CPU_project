@@ -1,9 +1,7 @@
-# Architecture 2022Spring Fudan
+# Architecture 2022Spring 
 
-课程网站：https://fducslg.github.io/Arch-2022Spring-FDU/
 
 ### 项目结构
-Arch-2022Sping-FDU  
 │── build：仿真测试时才会生成的目录  
 │── difftest：仿真测试框架  
 │── ready-to-run：仿真测试文件目录  
